@@ -1,57 +1,78 @@
 #include <boost/asio.hpp>
 #include <boost/system/error_code.hpp>
+#include <boost/beast.hpp>
 
 #include <iostream>
 #include <thread>
 #include <iomanip>
 
 using tcp = boost::asio::ip::tcp;
+namespace websocket = boost::beast::websocket;
+namespace net = boost::asio;
+namespace beast = boost::beast;
 
-void log(boost::system::error_code ec)
+void log(const std::string& where, boost::system::error_code ec)
 {
-    std::cerr << "[" << std::setw(14) << std::this_thread::get_id() << "] "
+    std::cerr << "[" << std::setw(20) << where << "] "
               << (ec ? "Error: " : "OK")
               << (ec ? ec.message() : "")
               << std::endl;
 }
 
-void onConnect(boost::system::error_code ec)
-{
-    log(ec);
-}
-
 int main()
 {
-    std::cerr << "[" << std::setw(14) << std::this_thread::get_id() << "] main"
-              << std::endl;
-    boost::asio::io_context ioc{};
+    const std::string url {"echo.websocket.org"};
+    const std::string port {"80"};
+    const std::string message {"Hello WebSocket"};
 
-    tcp::socket socket{boost::asio::make_strand(ioc)};
+    net::io_context ioc{};
+    tcp::socket socket{ioc};
+    
 
-    size_t nThreads {4};
-
-    // A 'falsey' error_code means "no error".
     boost::system::error_code ec {};
     tcp::resolver resolver {ioc};
-    auto resolverIt {resolver.resolve("google.com","80",ec)};
+    auto resolverIt {resolver.resolve(url,port,ec)};
     if (ec) {
-        log(ec);
+        log("resolver.resolve", ec);
         return -1;
     }
-    for (size_t idx {0}; idx < nThreads; ++idx) {
-        socket.async_connect(*resolverIt, onConnect);
+
+    socket.connect(*resolverIt, ec);
+    if (ec) {
+        log("socket.connect", ec);
+        return -2;
     }
 
-    // We must call io_context::run for asynchronous callbacks to run.
-    std::vector<std::thread> threads {};
-    threads.reserve(nThreads);
-    for (size_t idx {0}; idx < nThreads; ++idx) {
-        threads.emplace_back([&ioc]() {
-            ioc.run();
-        });
+    websocket::stream<boost::beast::tcp_stream> ws(std::move(socket));
+    ws.handshake(url,"/");
+    if (ec) {
+        log("ws.handshake", ec);
+        return -3;
     }
-    for (size_t idx {0}; idx < nThreads; ++idx) {
-        threads[idx].join();
+
+    ws.text(true);
+
+    net::const_buffer wbuffer {message.c_str(), message.size()};
+    ws.write(wbuffer);
+    if (ec) {
+        log("ws.write", ec);
+        return -4;
     }
+
+    beast::flat_buffer rbuffer{};
+    ws.read(rbuffer);
+    if (ec) {
+        log("ws.read", ec);
+        return 51;
+    }
+
+    std::cout << "ECHO: "
+              << beast::make_printable(rbuffer.data())
+              << std::endl;
+
+    log("returning", ec);
+
+    ws.close(websocket::close_code::normal);
+
     return 0;
 }
