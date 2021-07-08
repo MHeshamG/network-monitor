@@ -4,6 +4,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <string>
+#include <openssl/ssl.h>
 
 using NetworkMonitor::WebSocketClient;
 
