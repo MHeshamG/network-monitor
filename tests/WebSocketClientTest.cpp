@@ -5,6 +5,8 @@
 
 #include <string>
 #include <openssl/ssl.h>
+#include <filesystem>
+
 
 using NetworkMonitor::WebSocketClient;
 
@@ -63,6 +65,11 @@ BOOST_AUTO_TEST_CASE(class_WebSocketClient)
     BOOST_CHECK(messageReceived);
     BOOST_CHECK(disconnected);
     BOOST_CHECK_EQUAL(message, echo);
+}
+
+BOOST_AUTO_TEST_CASE(cacert_pem)
+{
+    BOOST_CHECK(!std::filesystem::exists(TESTS_CACERT_PEM));
 }
 
 BOOST_AUTO_TEST_SUITE_END();
