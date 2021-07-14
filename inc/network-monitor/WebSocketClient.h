@@ -4,6 +4,7 @@
 #include <boost/asio.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/beast.hpp>
+#include <boost/beast/ssl.hpp>
 
 #include<string>
 #include <functional>
@@ -11,9 +12,9 @@
 #include <iomanip>
 
 
-using tcp = boost::asio::ip::tcp;
-namespace websocket = boost::beast::websocket;
 namespace net = boost::asio;
+using tcp = net::ip::tcp;
+namespace websocket = boost::beast::websocket;
 namespace beast = boost::beast;
 
 using callbackPassingError = std::function<void (boost::system::error_code)>;
@@ -33,11 +34,13 @@ public:
      *  \param port The port on the server.
      *  \param ioc  The io_context object. The user takes care of calling
      *              ioc.run().
+     *  \param ctx  The TLS context to setup a TLS socket stream
      */
     WebSocketClient(
         const std::string& url,
         const std::string& port,
-        boost::asio::io_context& ioc
+        net::io_context& ioc,
+        net::ssl::context& ctx
     );
 
     /*! \brief Destructor.
@@ -91,12 +94,13 @@ private:
     bool closed {true};
 
     tcp::resolver resolver;
-    websocket::stream<boost::beast::tcp_stream> ws;
+    websocket::stream<beast::ssl_stream<beast::tcp_stream>> ws;
     beast::flat_buffer rbuffer{};
 
     void onResolve(boost::system::error_code, tcp::resolver::iterator);
     void onConnect(boost::system::error_code);
-    void onHandShake(boost::system::error_code);
+    void onTlsHandshake(boost::system::error_code);
+    void onHandshake(boost::system::error_code);
     void ListenToIncomingMessage(const boost::system::error_code& ec);
     void onReceive(boost::system::error_code, std::size_t);
 };
