@@ -38,6 +38,7 @@ public:
      */
     WebSocketClient(
         const std::string& url,
+        const std::string& endpoint,
         const std::string& port,
         net::io_context& ioc,
         net::ssl::context& ctx
@@ -89,6 +90,7 @@ private:
     callbackPassingError m_onDisconnect{nullptr};
 
     const std::string& m_url{};
+    const std::string& m_endpoint{};
     const std::string& m_port{};
 
     bool closed {true};

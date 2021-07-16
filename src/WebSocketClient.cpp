@@ -12,11 +12,13 @@ static void Log(const std::string& where, boost::system::error_code ec)
 
 WebSocketClient::WebSocketClient(
     const std::string& url,
+    const std::string& endpoint,
     const std::string& port,
     net::io_context& ioc,
     net::ssl::context& ctx
-) : m_url {url}, 
-    m_port {port}, 
+) : m_url {url},
+    m_endpoint {endpoint},
+    m_port {port},
     resolver {net::make_strand(ioc)}, 
     ws {net::make_strand(ioc), ctx}
 {
@@ -123,8 +125,14 @@ void WebSocketClient::onConnect(boost::system::error_code ec)
 
 void WebSocketClient::onTlsHandshake(boost::system::error_code ec)
 {
-    Log("OnTLSHandShake",ec);
-    ws.async_handshake(m_url, "/", 
+    if(ec){
+        Log("OnTLSHandShake",ec);
+        if (m_onConnect)
+            m_onConnect(ec);
+
+        return;
+    }
+    ws.async_handshake(m_url, m_endpoint, 
             [this](auto ec) {
                 onHandshake(ec);
             }
