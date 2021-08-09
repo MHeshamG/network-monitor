@@ -15,7 +15,8 @@ endif()
 find_package(Boost 1.74 REQUIRED COMPONENTS system unit_test_framework)
 find_package(Filesystem REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_package(CURL REQUIRED) 
+find_package(CURL REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 # Called before any other target is defined.
 enable_testing()
@@ -24,6 +25,7 @@ enable_testing()
 set(LIB_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/WebSocketClient.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/FileDownloader.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/TransportNetwork.cpp"
 )
 add_library(network-monitor STATIC ${LIB_SOURCES})
 target_compile_features(network-monitor
@@ -39,18 +41,22 @@ target_link_libraries(network-monitor
         Boost::Boost
         OpenSSL::OpenSSL
         std::filesystem
-        CURL::CURL
+        nlohmann_json::nlohmann_json
+    PRIVATE
+        CURL::CURL  
 )
 target_compile_definitions(network-monitor
     PUBLIC
         TESTS_CACERT_PEM="${CMAKE_CURRENT_SOURCE_DIR}/tests/cacert.pem"
+        TESTS_NETWORK_LAYOUT_JSON="${CMAKE_CURRENT_SOURCE_DIR}/tests/network-layout.json"
 )
 
 # Tests
 set(TESTS_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/main.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/tests/WebSocketClientTest.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/tests/FileDownloaderTests.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/tests/WebSocketClientTest.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/tests/FileDownloaderTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/TransportNetworkTests.cpp"
 )
 add_executable(network-monitor-tests ${TESTS_SOURCES})
 target_compile_features(network-monitor-tests
