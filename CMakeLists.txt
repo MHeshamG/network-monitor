@@ -49,13 +49,14 @@ target_compile_definitions(network-monitor
     PUBLIC
         TESTS_CACERT_PEM="${CMAKE_CURRENT_SOURCE_DIR}/tests/cacert.pem"
         TESTS_NETWORK_LAYOUT_JSON="${CMAKE_CURRENT_SOURCE_DIR}/tests/network-layout.json"
+        TEST_DATA="${CMAKE_CURRENT_SOURCE_DIR}/tests/json-test-files"
 )
 
 # Tests
 set(TESTS_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/main.cpp"
-    #"${CMAKE_CURRENT_SOURCE_DIR}/tests/WebSocketClientTest.cpp"
-    #"${CMAKE_CURRENT_SOURCE_DIR}/tests/FileDownloaderTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/WebSocketClientTest.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/FileDownloaderTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/TransportNetworkTests.cpp"
 )
 add_executable(network-monitor-tests ${TESTS_SOURCES})
