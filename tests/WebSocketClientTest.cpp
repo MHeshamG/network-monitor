@@ -38,7 +38,9 @@ BOOST_AUTO_TEST_CASE(class_WebSocketClient)
     ctx.load_verify_file(TESTS_CACERT_PEM);
 
     // The class under test
-    WebSocketClient client {url, endpoint, port, ioc, ctx};
+    WebSocketClient<tcp::resolver,
+                    websocket::stream<beast::ssl_stream<beast::tcp_stream>>> 
+                client {url, endpoint, port, ioc, ctx};
 
     // We use these flags to check that the connection, send, receive functions
     // work as expected.
@@ -122,7 +124,9 @@ BOOST_AUTO_TEST_CASE(Valid_STOMP_Response)
     ctx.load_verify_file(TESTS_CACERT_PEM);
 
     // The class under test
-    WebSocketClient client {url, endpoint, port, ioc, ctx};
+    WebSocketClient<tcp::resolver,
+                    websocket::stream<beast::ssl_stream<beast::tcp_stream>>> 
+                client {url, endpoint, port, ioc, ctx};
 
     // Our own callbacks
     auto onSend {[&messageSent](auto ec) {
