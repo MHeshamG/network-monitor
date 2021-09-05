@@ -285,5 +285,12 @@ private:
     }
 };
 
+using BoostWebSocketClient = WebSocketClient<
+    boost::asio::ip::tcp::resolver,
+    boost::beast::websocket::stream<
+        boost::beast::ssl_stream<boost::beast::tcp_stream>
+    >
+>;
+
 } // namespace NetworkMonitor
 #endif // WEBSOCKET_CLIENT_H

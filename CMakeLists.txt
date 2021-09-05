@@ -55,8 +55,8 @@ target_compile_definitions(network-monitor
 set(TESTS_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/main.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/WebSocketClientTest.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/tests/FileDownloaderTests.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/tests/TransportNetworkTests.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/tests/FileDownloaderTests.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/tests/TransportNetworkTests.cpp"
 )
 add_executable(network-monitor-tests ${TESTS_SOURCES})
 target_compile_features(network-monitor-tests
