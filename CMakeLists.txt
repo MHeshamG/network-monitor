@@ -25,6 +25,7 @@ enable_testing()
 set(LIB_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/FileDownloader.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TransportNetwork.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/StompFrame.cpp"
 )
 add_library(network-monitor STATIC ${LIB_SOURCES})
 target_compile_features(network-monitor
@@ -54,7 +55,8 @@ target_compile_definitions(network-monitor
 # Tests
 set(TESTS_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/main.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/tests/WebSocketClientTest.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/tests/WebSocketClientTest.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/StompFrameTests.cpp"
     #"${CMAKE_CURRENT_SOURCE_DIR}/tests/FileDownloaderTests.cpp"
     #"${CMAKE_CURRENT_SOURCE_DIR}/tests/TransportNetworkTests.cpp"
 )
