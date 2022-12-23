@@ -37,11 +37,11 @@ What are the main functional blocks? What are their inputs and outputs?
 This project is built using C++17 and here are some of the technologies and libraries used:
 * Websockets
 * TLS
-* JSON
-* STOMP
+* [STOMP](https://stomp.github.io/)
 * [Boost asio](https://www.boost.org/doc/libs/1_76_0/doc/html/boost_asio.html)
 * [Boost beast](https://www.boost.org/doc/libs/1_73_0/libs/beast/doc/html/index.html)
 * [Conan package manager](https://conan.io/)
 * [CMake](https://cmake.org/)
 * [nlohmann](https://github.com/nlohmann/json)
 * [libcurl](https://curl.se/libcurl/)
+* [ninja](https://ninja-build.org/)
