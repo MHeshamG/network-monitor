@@ -2,7 +2,10 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <nlohmann/json.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <spdlog/spdlog.h>
 
 namespace NetworkMonitor {
 
@@ -80,6 +83,66 @@ struct Line {
     bool operator==(const Line& other) const;
 };
 
+/*! \brief Travel plan between two stations.
+ *
+ *  If startStationId and endStationId are the same station, the travel steps
+ *  vector contains one item.
+ *
+ *  If there is no valid travel route between startStationId and endStationId,
+ *  or if any of startStationId and endStationId is not in the network, the
+ *  travel steps vector is empty.
+ */
+struct TravelRoute {
+    struct Step {
+        Id startStationId {};
+        Id endStationId {};
+        Id lineId {};
+        Id routeId {};
+        unsigned int travelTime {0};
+
+        bool operator==(const Step& other) const;
+    };
+
+    Id startStationId {};
+    Id endStationId {};
+    unsigned int totalTravelTime {0};
+    std::vector<Step> steps {};
+
+    bool operator==(const TravelRoute& other) const;
+};
+
+/*! \brief Print operator for the `TravelRoute` class.
+ */
+std::ostream& operator<<(std::ostream& os, const TravelRoute& r);
+
+/* \brief Serialize TravelRoute::Step to JSON.
+ */
+void to_json(
+    nlohmann::json& dst,
+    const TravelRoute::Step& src
+);
+
+/* \brief Serialize TravelRoute::Step from JSON.
+ */
+void from_json(
+    const nlohmann::json& src,
+    TravelRoute::Step& dst
+);
+
+/* \brief Serialize TravelRoute to JSON.
+ */
+void to_json(
+    nlohmann::json& dst,
+    const TravelRoute& src
+);
+
+/* \brief Serialize TravelRoute from JSON.
+ */
+void from_json(
+    const nlohmann::json& src,
+    TravelRoute& dst
+);
+
 /*! \brief Passenger event
  */
 struct PassengerEvent {
@@ -90,7 +153,13 @@ struct PassengerEvent {
 
     Id stationId {};
     Type type {Type::In};
+    boost::posix_time::ptime timestamp {};
 };
+
+void from_json(
+    const nlohmann::json& src,
+    PassengerEvent& dst
+);
 
 /*! \brief Underground network representation
  */
@@ -257,6 +326,34 @@ public:
         const Id& stationBId
     ) const;
 
+    /*! \brief Get the fastest travel route between any 2 stations.
+     *
+     *  \returns empty list if the function could not find the route between the
+     *           two stations, or station A or B not found.
+     */
+    TravelRoute GetFastestTravelRoute (
+        const Id& stationAId,
+        const Id& stationBId
+        ) const;
+    
+    /*! \brief Get a quiet travel route alternative to the fastest route, from
+     *         station A to station B.
+     *
+     *  \param maxSlowdownPc    Maximum travel time increase when picking a
+     *                          quiet route.
+     *  \param minQuietnessPc   Minimum decrease in route crowding that makes a
+     *                          quiet route worth the travel time increase.
+     *  \param maxNPaths        Maximum number of paths to explore. If set,
+     *                          this method may yield suboptimal results.
+     */
+    TravelRoute GetQuietTravelRoute(
+        const Id& stationA,
+        const Id& stationB,
+        const double maxSlowdownPc,
+        const double minQuietnessPc,
+        const size_t maxNPaths = std::numeric_limits<size_t>::max()
+    ) const;
+
 private:
     // Forward-declare all internal structs.
     struct GraphNode;
@@ -304,6 +401,46 @@ private:
         std::unordered_map<Id, std::shared_ptr<RouteInternal>> routes {};
     };
 
+    // A PathStop object represents a stop and the network edge to get to it.
+    // We use it internally in our path-finding algorithms.
+    struct PathStop {
+        std::shared_ptr<GraphNode> node {nullptr};
+        std::shared_ptr<GraphEdge> edge {nullptr};
+
+        bool operator==(
+            const PathStop& other
+        ) const;
+    };
+
+    // We need a custom PathStop hasher to use PathStop in std::unordered_map.
+    struct PathStopHash {
+        size_t operator()(
+            const PathStop& stop
+        ) const;
+    };
+
+    // We use PathStopDist in our path-finding algorithm to rank path stops
+    // by their distance from the path starting point.
+    using PathStopDist = std::pair<PathStop, unsigned int>;
+
+    // We need a custom PathStopDist comparator object to use PathStopDist in
+    // std::priority_queue.
+    struct PathStopDistCmp {
+        bool operator()(
+            const PathStopDist& a,
+            const PathStopDist& b
+        ) const;
+    };
+
+    using Path = std::vector<PathStopDist>;
+
+    struct PathCmp {
+        bool operator()(
+            const Path& a,
+            const Path& b
+        ) const;
+    };
+
     // Map station and lines by ID. We do not map line routes here, as they
     // are mapped within each line representation.
     std::unordered_map<Id, std::shared_ptr<GraphNode>> stations_ {};
@@ -313,6 +450,33 @@ private:
     std::shared_ptr<LineInternal> getLine(const Id& lineId) const;
     std::shared_ptr<RouteInternal>getRoute(const Id& lineId, const Id& routeId) const;
     bool addRouteToLine(const Route& route, std::shared_ptr<TransportNetwork::LineInternal>& lineInternal);
+    
+    // Internal version of GetFastestTravelRoute.
+    // We pass station A as a PathStopDist instance instead of as a GraphNode
+    // pointer to allow for warm starts, i.e. paths that start with a pre-set
+    // distance-from-origin and incoming route.
+    // We also pass a set of excluded stops in case we want to skip some
+    // stations from the paht-finding algorithm.
+    Path GetFastestTravelRoute(
+        const PathStopDist& stopA,
+        const std::shared_ptr<GraphNode>& stationB,
+        const std::unordered_set<PathStop, PathStopHash>& excludedStops = {}
+    ) const;
+
+    // Internal function to get all the paths (up to maxNPaths) that meet a
+    // certain travel time criterion:
+    // bestTravelTime <= travelTime <= bestTravelTime * (1 + maxSlowdownPc)
+    std::vector<Path> GetFastestTravelRoutes(
+        const std::shared_ptr<TransportNetwork::GraphNode>& stationA,
+        const std::shared_ptr<TransportNetwork::GraphNode>& stationB,
+        const double maxSlowdownPc,
+        const size_t maxNPaths = std::numeric_limits<size_t>::max()
+    ) const;
+
+    // Get the total crowding over a given path.
+    unsigned int GetPathCrowding(
+        const Path& path
+    ) const;
 
 };
 

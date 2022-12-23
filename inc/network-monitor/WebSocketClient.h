@@ -8,6 +8,7 @@
 #include <boost/system/error_code.hpp>
 
 #include <openssl/ssl.h>
+#include <spdlog/spdlog.h>
 
 #include <chrono>
 #include <functional>
@@ -62,6 +63,8 @@ public:
     resolver {net::make_strand(ioc)}, 
     ws {net::make_strand(ioc), ctx}
     {
+        spdlog::info("WebSocketClient: New client for {}:{}{}",
+                     m_url, m_port, m_endpoint);
     }
 
     /*! \brief Destructor.
@@ -84,12 +87,14 @@ public:
         callbackPassingError onDisconnect = nullptr
     )
     {
+        std::cout<<m_url<<"................."<<m_port<<std::endl;
         m_onConnect = onConnect;
         m_onMessage = onMessage;
         m_onDisconnect = onDisconnect;
 
         closed = false;
-
+        spdlog::info("WebSocketClient: Attempting to resolve {}:{}",
+                     m_url, m_port);
         resolver.async_resolve(m_url, m_port, 
             [this](auto ec, auto resolverIt) {
                 onResolve(ec, resolverIt);
@@ -151,9 +156,9 @@ private:
                 << std::endl;
     }
 
-    const std::string& m_url{};
-    const std::string& m_endpoint{};
-    const std::string& m_port{};
+    std::string m_url{};
+    std::string m_endpoint{};
+    std::string m_port{};
 
     bool closed {true};
 
@@ -164,19 +169,22 @@ private:
     void onResolve(boost::system::error_code ec, tcp::resolver::iterator resolverIt)
     {
         if(ec){
-            Log("OnResolve", ec);
+            Log("OnResolvex", ec);
             if (m_onConnect)
                 m_onConnect(ec);
             
             return;
         }
-        
+        spdlog::info("WebSocketClient: Server URL resolved: {}",
+                     resolverIt->endpoint().address().to_string());
         get_lowest_layer(ws).expires_after(std::chrono::seconds(5));
+
+        spdlog::info("WebSocketClient: Attempting connection to server");
         get_lowest_layer(ws).async_connect(*resolverIt,
             [this](auto ec) {
                 onConnect(ec);
             }
-        );
+        ); 
     }
 
     void onConnect(boost::system::error_code ec)
