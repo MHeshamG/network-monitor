@@ -1,2 +1,4 @@
 conan install .. --profile ../conanprofile.toml --build missing
 cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS='-D_GLIBCXX_USE_CXX11_ABI=0'
+ninja
+ninja test //To Run tests
